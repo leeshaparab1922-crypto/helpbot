@@ -1,0 +1,71 @@
+import sys
+import anthropic
+
+from helpbot import Settings, Conversation
+def main():
+    try:
+        settings = Settings.from_env()
+    except EnvironmentError as e:
+        sys.exit(str(e))
+
+    conversation = Conversation()
+
+    temperature = settings.temperature
+
+    client = anthropic.Anthropic(
+        api_key=settings.anthropic_api_key
+    )
+
+    while True:
+
+        try:
+            user_input = input("You: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print("Goodbye!")
+            break
+
+        if not user_input:
+            continue
+
+        # handle temperature command
+        if user_input.lower().startswith("/temp"):
+            parts = user_input.split()
+            # show current temperature if no argument
+            if len(parts) == 1:
+                print(f"Current temperature: {temperature}")
+                continue
+            # try to set new temperature
+            try:
+                new_temp = float(parts[1])
+            except ValueError:
+                print("Temperature must be a number.")
+                continue
+            if not 0.0 <= new_temp <= 1.0:
+                print("Temperature must be between 0.0 and 1.0.")
+                continue
+            temperature = new_temp
+            print(f"Temperature set to {temperature}")
+            continue
+
+        # handle quit commands
+        if user_input.lower() in ("quit", "exit", "bye"):
+            print("Goodbye!")
+            break
+
+        conversation.add_user(user_input)
+
+        response = client.messages.create(
+            model=settings.model,
+            max_tokens=settings.max_tokens,
+            temperature=temperature,
+            messages=conversation.messages,
+        )
+
+        reply = response.content[0].text
+
+        conversation.add_assistant(reply)
+
+        print(f"HelpBot: {reply}")
+
+if __name__ == "__main__":
+    main()
