@@ -23,7 +23,7 @@ class Helpbot:
             model=self._settings.model,
             max_tokens=self._settings.max_tokens,
             temperature=self._settings.temperature,
-            messages=conversation.messages,
+            messages=conversation.to_api_format(),
             system=SYSTEM_PROMPT
         )
 
@@ -33,4 +33,4 @@ class Helpbot:
             output_tokens=response.usage.output_tokens,
             total_tokens=response.usage.input_tokens + response.usage.output_tokens
         )
-
+    
