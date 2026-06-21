@@ -1,5 +1,7 @@
-from dataclasses import dataclass
+from dataclasses import Field, dataclass
 from dotenv import load_dotenv
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 import os
 
 load_dotenv()
@@ -14,19 +16,13 @@ class Settings:
     voyage_api_key: str | None = None
 
 
-    @classmethod
-    def from_env(cls):
-        anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", frozen=True)
 
-        if not anthropic_api_key:
-            raise EnvironmentError("ANTHROPIC_API_KEY is missing")
-
-        voyage_api_key = os.getenv("VOYAGE_API_KEY")
-
-        return cls(
-            anthropic_api_key=anthropic_api_key,
-            voyage_api_key=voyage_api_key
-        )
+    anthropic_api_key: str
+    model: str = "claude-haiku-4-5"
+    max_tokens: int = Field(default=1000, gt=0)
+    temperature: float = Field(default=0.1, ge=0.0, le=1.0)
     
 SYSTEM_PROMPT = """\
 Act as HelpBot, PageTurner Books' customer support agent. \
