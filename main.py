@@ -1,18 +1,20 @@
 import sys
 import anthropic
+from pydantic import ValidationError  # Added import
 
-from helpbot import Settings, Conversation,Helpbot
+from helpbot import Settings, Conversation, Helpbot
 
 def main():
     try:
-        settings = Settings.from_env()
-    except EnvironmentError as e:
-        sys.exit(str(e))
+        # Changed from Settings.from_env() to Settings()
+        settings = Settings()
+    except ValidationError as e:  # Changed from EnvironmentError
+        sys.exit(f"Configuration error:\n{e}")
 
     conversation = Conversation()
 
     temperature = settings.temperature
-    bot=Helpbot(settings)
+    bot = Helpbot(settings)
 
     while True:
 
