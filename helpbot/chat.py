@@ -1,9 +1,8 @@
 import anthropic
-
 from pydantic import BaseModel
-from helpbot import conversation
-from helpbot.config import SYSTEM_PROMPT, Settings
 
+from helpbot.conversation import Conversation
+from helpbot.config import SYSTEM_PROMPT, Settings
 
 class ChatResult(BaseModel):
     text:str
@@ -13,18 +12,18 @@ class ChatResult(BaseModel):
     
 
 
-class Helpbot:
+class HelpBot:
     def __init__(self, settings: Settings):
+        self._client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
         self._settings = settings
-        self.client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
 
-    def chat(self, conversation: conversation.Conversation) -> ChatResult:
-        response = self.client.messages.create(
+    def chat(self, conversation: Conversation) -> ChatResult:
+        response = self._client.messages.create(
             model=self._settings.model,
-            max_tokens=self._settings.max_tokens,
-            temperature=self._settings.temperature,
             messages=conversation.to_api_format(),
-            system=SYSTEM_PROMPT
+            max_tokens=self._settings.max_tokens,
+            system=SYSTEM_PROMPT,
+            temperature=self._settings.temperature,
         )
 
         return ChatResult(
