@@ -2,23 +2,26 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
-@dataclass
-class Conversation:
-    _messages: list[dict[str, Any]] = field(default_factory=list)
+from pydantic import BaseModel, Field
+from typing import Literal
 
-    @property
-    def messages(self) -> list[dict[str, Any]]:
-        return self._messages
+
+class Message(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str
+
+
+class Conversation(BaseModel):
+    messages: list[Message] = Field(default_factory=list)
 
     def add_user(self, text: str) -> None:
-        self._messages.append(
-            {"role": "user", "content": text}
-        )
+        self.messages.append(Message(role="user", content=text))
 
     def add_assistant(self, text: str) -> None:
-        self._messages.append(
-            {"role": "assistant", "content": text}
-        )
+        self.messages.append(Message(role="assistant", content=text))
 
-    def __len__(self) -> int:
-        return len(self._messages)
+    def clear(self) -> None:
+        self.messages.clear()
+
+    def to_api_format(self) -> list[dict]:
+        return [m.model_dump() for m in self.messages]
