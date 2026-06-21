@@ -1,7 +1,8 @@
 import sys
 import anthropic
 
-from helpbot import Settings, Conversation
+from helpbot import Settings, Conversation,Helpbot
+
 def main():
     try:
         settings = Settings.from_env()
@@ -11,10 +12,7 @@ def main():
     conversation = Conversation()
 
     temperature = settings.temperature
-
-    client = anthropic.Anthropic(
-        api_key=settings.anthropic_api_key
-    )
+    bot=Helpbot(settings)
 
     while True:
 
@@ -54,18 +52,13 @@ def main():
 
         conversation.add_user(user_input)
 
-        response = client.messages.create(
-            model=settings.model,
-            max_tokens=settings.max_tokens,
-            temperature=temperature,
-            messages=conversation.messages,
-        )
+        reply = bot.chat(conversation)
+        
 
-        reply = response.content[0].text
+        conversation.add_assistant(reply.text)
 
-        conversation.add_assistant(reply)
-
-        print(f"HelpBot: {reply}")
+        print(f"HelpBot: {reply.text}")
+        print(f"(Input Tokens: {reply.input_tokens}, Output Tokens: {reply.output_tokens}, Total Tokens: {reply.total_tokens})\n")
 
 if __name__ == "__main__":
     main()
