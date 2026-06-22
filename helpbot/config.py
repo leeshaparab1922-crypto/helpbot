@@ -7,6 +7,7 @@ import os
 load_dotenv()
 
 
+'''
 @dataclass(frozen=True)
 class Settings:
     anthropic_api_key: str
@@ -14,6 +15,7 @@ class Settings:
     max_tokens: int = 1000
     temperature: float = 0.0
     voyage_api_key: str | None = None
+'''
 
 
 class Settings(BaseSettings):
