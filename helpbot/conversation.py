@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Literal
 
 class Message(BaseModel):
@@ -6,7 +6,7 @@ class Message(BaseModel):
     content: str
 
 class Conversation(BaseModel):
-    messages: list[Message] = []
+    messages: list[Message] = Field(default_factory=list)
 
     def add_user(self, text: str) -> None:
         self.messages.append(Message(role="user", content=text))

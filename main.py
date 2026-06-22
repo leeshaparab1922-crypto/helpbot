@@ -1,9 +1,8 @@
 import sys
-import anthropic
-from pydantic import ValidationError  #added import
+from pydantic import ValidationError
 
 from helpbot import Settings, Conversation, HelpBot
-from helpbot.chat import HelpBot
+
 
 def main():
     try:
@@ -55,7 +54,7 @@ def main():
 
         conversation.add_user(user_input)
 
-        reply = bot.chat(conversation)
+        reply = bot.chat(conversation, temperature=temperature)
         
 
         conversation.add_assistant(reply.text)
