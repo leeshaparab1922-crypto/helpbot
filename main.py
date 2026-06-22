@@ -54,7 +54,7 @@ def main():
 
         conversation.add_user(user_input)
 
-        reply = bot.chat(conversation, temperature=temperature)
+        reply = bot.chat_streaming(conversation, temperature=temperature)
         
 
         conversation.add_assistant(reply.text)
