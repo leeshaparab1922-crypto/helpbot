@@ -1,4 +1,4 @@
-from dataclasses import Field, dataclass
+from dataclasses import Field
 #from dotenv import load_dotenv
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
