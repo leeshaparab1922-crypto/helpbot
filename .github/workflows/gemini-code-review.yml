@@ -1,0 +1,26 @@
+name: "AI Code Review"
+
+on:
+  pull_request:
+    branches: [master]
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Gemini Code Review
+        uses: google-gemini/gemini-code-assist-action@v1
+        with:
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          model: gemini-1.5-pro-latest
+          pull_request_chunk_size: 3500
+          extra_prompt: |
+            This is a Python chatbot using the Anthropic SDK and Pydantic.
+            Focus on: Python best practices, security issues, correct Anthropic SDK usage, and Pydantic model correctness.
