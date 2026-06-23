@@ -1,71 +1,122 @@
+from __future__ import annotations
+
 import json
+from typing import Callable
+import anthropic
+
 from helpbot.config import Settings
 
-INTENTS = [
-    "order_status", "order_cancellation", "order_wrong_item", "order_missing_item",
-    "return_request", "refund_status",
-    "account_login_issue", "account_update",
-    "book_recommendation", "book_availability",
-    "complaint", "general_enquiry",
-]
 
-def _extract(prompt: str, settings: Settings) -> dict:
-    import anthropic
-    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+# ---------------------------------------------------------------------------
+# Core extraction primitive — prefill + stop sequence pattern
+# ---------------------------------------------------------------------------
+
+def _extract(prompt: str, settings: Settings, client: anthropic.Anthropic) -> dict:
     response = client.messages.create(
         model=settings.model,
-        max_tokens=256,
+        max_tokens=300,
         messages=[
             {"role": "user", "content": prompt},
             {"role": "assistant", "content": "```json"},
         ],
         stop_sequences=["```"],
     )
-    return json.loads(response.content[0].text)
+    return json.loads(response.content[0].text.strip())
 
 
-def detect_intent(customer_message: str, settings: Settings) -> str:
-    prompt = f"""Classify this customer message into exactly one intent.
+# ---------------------------------------------------------------------------
+# Intent classification
+# ---------------------------------------------------------------------------
 
-Valid intents: {", ".join(INTENTS)}
+_INTENTS = [
+    "order_status", "order_cancellation", "order_wrong_item", "order_missing_item",
+    "return_request", "refund_status", "account_login_issue", "account_update",
+    "book_recommendation", "book_availability", "complaint", "general_enquiry",
+]
 
-Customer message: {customer_message}
 
-Respond with JSON: {{"intent": "<intent_string>"}}"""
+def detect_intent(customer_message: str, settings: Settings, client: anthropic.Anthropic) -> str:
+    """Classifies the message into one of the supported intents. Falls back to general_enquiry."""
+    prompt = (
+        "Classify the customer support message below into exactly one intent.\n\n"
+        f"Allowed intents: {', '.join(_INTENTS)}\n\n"
+        "Return ONLY a JSON object with a single field: intent\n\n"
+        f"Customer message: {customer_message}"
+    )
+    result = _extract(prompt, settings, client)
+    return result.get("intent", "general_enquiry")
 
-    try:
-        result = _extract(prompt, settings)
-        intent = result.get("intent", "general_enquiry")
-        return intent if intent in INTENTS else "general_enquiry"
-    except Exception:
-        return "general_enquiry"
-    
-def _make_extractor(description: str, fields: list[str]):
-    def extractor(customer_message: str, settings: Settings) -> dict:
-        fields_str = ", ".join(fields)
-        prompt = f"""Extract structured data from this customer message for a {description}.
 
-Customer message: {customer_message}
+# ---------------------------------------------------------------------------
+# Extractor registry
+# To add a new intent: one entry in _EXTRACTOR_SPECS. Nothing else changes.
+# Each entry: intent key -> (description, fields specification)
+# ---------------------------------------------------------------------------
 
-Respond with JSON containing these fields: {fields_str}
-Use null for any field not mentioned."""
-        try:
-            return _extract(prompt, settings)
-        except Exception:
-            return {f: None for f in fields}
+_EXTRACTOR_SPECS: dict[str, tuple[str, str]] = {
+    "order_status": (
+        "an order status enquiry",
+        "order_id (string or null), query_type (location/eta/delivered)",
+    ),
+    "order_cancellation": (
+        "an order cancellation request",
+        "order_id (string or null), reason (string)",
+    ),
+    "order_wrong_item": (
+        "a wrong item complaint",
+        "order_id (string or null), received_item (string), expected_item (string or null)",
+    ),
+    "order_missing_item": (
+        "a missing item complaint",
+        "order_id (string or null), missing_item (string)",
+    ),
+    "return_request": (
+        "a return request",
+        "order_id (string or null), reason (string), urgency (low/medium/high)",
+    ),
+    "refund_status": (
+        "a refund status enquiry",
+        "order_id (string or null), return_date (string or null)",
+    ),
+    "account_login_issue": (
+        "an account login issue",
+        "email (string or null), issue_type (forgot_password/locked/other)",
+    ),
+    "account_update": (
+        "an account update request",
+        "update_type (email/address/payment), new_value (string or null)",
+    ),
+    "book_recommendation": (
+        "a book recommendation request",
+        "genre (string or null), author_preference (string or null), format (ebook/paperback/hardcover/any), mood (string or null)",
+    ),
+    "book_availability": (
+        "a book availability enquiry",
+        "title (string or null), author (string or null)",
+    ),
+    "complaint": (
+        "a customer complaint",
+        "complaint_type (shipping/product_quality/wrong_item/service/other), order_id (string or null), severity (low/medium/high)",
+    ),
+}
+
+
+def _make_extractor(description: str, fields: str) -> Callable[[str, Settings, anthropic.Anthropic], dict]:
+    """Factory — returns an extractor closed over the given description and fields."""
+    def extractor(customer_message: str, settings: Settings, client: anthropic.Anthropic) -> dict:
+        prompt = (
+            f"Extract {description} from this customer message.\n"
+            f"Return ONLY a JSON object with: {fields}.\n\n"
+            f"Customer message: {customer_message}"
+        )
+        return _extract(prompt, settings, client)
+    extractor.__doc__ = f"Fields: {fields}"
     return extractor
 
 
-INTENT_EXTRACTOR_MAP: dict[str, callable] = {
-    "order_status":        _make_extractor("order status enquiry",      ["order_id"]),
-    "order_cancellation":  _make_extractor("order cancellation",        ["order_id", "reason"]),
-    "order_wrong_item":    _make_extractor("wrong item received",       ["order_id", "item_received", "item_ordered"]),
-    "order_missing_item":  _make_extractor("missing item in order",     ["order_id", "missing_item"]),
-    "return_request":      _make_extractor("return request",            ["order_id", "reason", "urgency"]),
-    "refund_status":       _make_extractor("refund status enquiry",     ["order_id"]),
-    "account_login_issue": _make_extractor("account login issue",       ["email"]),
-    "account_update":      _make_extractor("account update request",    ["field_to_update", "new_value"]),
-    "book_recommendation": _make_extractor("book recommendation",       ["genre", "author", "mood"]),
-    "book_availability":   _make_extractor("book availability enquiry", ["title", "author"]),
-    "complaint":           _make_extractor("complaint",                 ["topic", "severity"]),
+# Dict comprehension — clean, no loop side-effects, no globals() injection
+# main.py looks up the right extractor via INTENT_EXTRACTOR_MAP.get(intent)
+INTENT_EXTRACTOR_MAP: dict[str, Callable[[str, Settings, anthropic.Anthropic], dict]] = {
+    intent: _make_extractor(desc, fields)
+    for intent, (desc, fields) in _EXTRACTOR_SPECS.items()
 }
