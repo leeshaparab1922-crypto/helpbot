@@ -13,8 +13,8 @@ class ChatResult(BaseModel):
 
 
 class HelpBot:
-    def __init__(self, settings: Settings):
-        self._client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+    def __init__(self, settings: Settings, client: anthropic.Anthropic | None = None) -> None:
+        self._client=client
         self._settings = settings
 
     def chat_streaming(self, conversation: Conversation, temperature: float | None = None,opener:str="") -> ChatResult:

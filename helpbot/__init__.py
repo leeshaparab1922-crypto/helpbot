@@ -1,6 +1,11 @@
-from helpbot.config import Settings
+from helpbot.config import Settings, SYSTEM_PROMPT
 from helpbot.chat import HelpBot
 from helpbot.conversation import Conversation
+from helpbot.output import detect_intent, INTENT_EXTRACTOR_MAP
 
-#let there whatever be in helpbot package only import Settings from helpbot.config and not from helpbot
-__all__ = ["Settings", "Conversation", "HelpBot"]
+__all__ = [
+    "Settings", "SYSTEM_PROMPT",
+    "HelpBot",
+    "Conversation",
+    "detect_intent", "INTENT_EXTRACTOR_MAP",
+]
