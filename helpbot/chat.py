@@ -17,21 +17,30 @@ class HelpBot:
         self._client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
         self._settings = settings
 
-    def chat_streaming(self, conversation: Conversation, temperature: float | None = None) -> ChatResult:
+    def chat_streaming(self, conversation: Conversation, temperature: float | None = None,opener:str="") -> ChatResult:
+
+        messages = conversation.to_api_format()
+
+        if opener:
+            messages.append({ "role": "assistant", "content": opener })
+
         temp = temperature if temperature is not None else self._settings.temperature
         with self._client.messages.stream(
             model=self._settings.model,
-            messages=conversation.to_api_format(),
+            messages=messages,
             max_tokens=self._settings.max_tokens,
             system=SYSTEM_PROMPT,
             temperature=temp,
         ) as stream:
+            
+            if opener:
+                print(opener, end="", flush=True)
             for chunk in stream.text_stream:
                 print(chunk, end="", flush=True)
             print()
             final = stream.get_final_message()
 
-        full_text = final.content[0].text
+        full_text =opener + final.content[0].text
         conversation.add_assistant(full_text)
         return ChatResult(
             text=full_text,
