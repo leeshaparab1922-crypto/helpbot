@@ -41,32 +41,3 @@ def detect_intent(customer_message: str, settings: Settings, client: anthropic.A
     )
     result = _extract(prompt, settings, client)
     return result.get("intent", "general_enquiry")
-
-
-# ---------------------------------------------------------------------------
-# Extractor registry
-# To add a new intent: one entry in _EXTRACTOR_SPECS. Nothing else changes.
-# Each entry: intent key -> (description, fields specification)
-# ---------------------------------------------------------------------------
-
-
-
-def _make_extractor(description: str, fields: str) -> Callable[[str, Settings, anthropic.Anthropic], dict]:
-    """Factory — returns an extractor closed over the given description and fields."""
-    def extractor(customer_message: str, settings: Settings, client: anthropic.Anthropic) -> dict:
-        prompt = (
-            f"Extract {description} from this customer message.\n"
-            f"Return ONLY a JSON object with: {fields}.\n\n"
-            f"Customer message: {customer_message}"
-        )
-        return _extract(prompt, settings, client)
-    extractor.__doc__ = f"Fields: {fields}"
-    return extractor
-
-
-# Dict comprehension — clean, no loop side-effects, no globals() injection
-# main.py looks up the right extractor via INTENT_EXTRACTOR_MAP.get(intent)
-INTENT_EXTRACTOR_MAP: dict[str, Callable[[str, Settings, anthropic.Anthropic], dict]] = {
-    intent: _make_extractor(desc, fields)
-    for intent, (desc, fields) in _EXTRACTOR_SPECS.items()
-}
