@@ -1,23 +1,5 @@
-from dataclasses import Field
-#from dotenv import load_dotenv
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
-#import os
-
-#load_dotenv()  # Load environment variables from .env file
-
-
-
-
-'''
-@dataclass(frozen=True)
-class Settings:
-    anthropic_api_key: str
-    model: str = "claude-haiku-4-5"
-    max_tokens: int = 1000
-    temperature: float = 0.0
-    voyage_api_key: str | None = None
-'''
 
 
 class Settings(BaseSettings):
