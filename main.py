@@ -2,8 +2,7 @@ import sys
 import anthropic
 from pydantic import ValidationError
 
-from helpbot import ( Settings, HelpBot, Conversation, detect_intent )
-from helpbot.registry import INTENT_REGISTRY
+from helpbot import (Settings, HelpBot, Conversation, detect_intent, INTENT_REGISTRY)
 
 
 _INTENT_OPENERS : dict[str, str] = {intent : config["opener"] for intent, config in INTENT_REGISTRY.items() if config.get("opener")}  # filter out empty openers
