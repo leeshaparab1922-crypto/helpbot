@@ -15,6 +15,14 @@ def _init_db() -> None:
     conn.close()
     return version < _SCHEMA_VERSION
 
+def _schema_outdated() -> bool:
+    if not _DB_PATH.exists():
+        return True
+    conn = sqlite3.connect(_DB_PATH)
+    version = conn.execute("PRAGMA user_version").fetchone()[0]
+    conn.close()
+    return version < _SCHEMA_VERSION
+
 @contextmanager
 def get_connection():
     if _schema_outdated():
